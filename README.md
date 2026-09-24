@@ -1,6 +1,8 @@
 # office-mcp-server
 
-A [Model Context Protocol (MCP)](https://modelcontextprotocol.io) server that lets AI assistants (like [IBM Bob](https://www.ibm.com/bob)) read and write Microsoft Office files — both **locally on disk** and in **Microsoft 365 / OneDrive / SharePoint** via the Microsoft Graph API.
+A [Model Context Protocol (MCP)](https://modelcontextprotocol.io) server that lets AI assistants read and write Microsoft Office files — both **locally on disk** and in **Microsoft 365 / OneDrive / SharePoint** via the Microsoft Graph API.
+
+Works with any MCP-compatible client: **Claude Desktop**, **Cursor**, **IBM Bob**, **Windsurf**, or any other host that supports the MCP stdio transport.
 
 ---
 
@@ -19,7 +21,7 @@ A [Model Context Protocol (MCP)](https://modelcontextprotocol.io) server that le
 ## Prerequisites
 
 - [Node.js](https://nodejs.org) v18 or later
-- An MCP-compatible AI assistant (e.g. IBM Bob)
+- Any MCP-compatible client (Claude Desktop, Cursor, IBM Bob, Windsurf, etc.)
 - For Microsoft 365 features: an Azure app registration (see [Azure Setup](#azure-setup))
 
 ---
@@ -37,9 +39,85 @@ The compiled server will be at `build/index.js`.
 
 ---
 
-## Registering with Bob (mcp.json)
+## Client Setup
 
-Add the following entry to your Bob MCP config. Use the **global** config (`~/.bob/settings/mcp.json`) to make it available in every workspace, or a **workspace** config (`.bob/mcp.json`) to scope it to one project.
+The server speaks the standard MCP **stdio** transport and works with any compatible client. The config shape is the same everywhere — only the file location differs.
+
+> In all examples below, replace `/absolute/path/to/office-mcp-server` with the actual path on your machine (the directory you cloned into).
+
+---
+
+### Claude Desktop
+
+Edit `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) or `%APPDATA%\Claude\claude_desktop_config.json` (Windows):
+
+```json
+{
+  "mcpServers": {
+    "office-mcp-server": {
+      "command": "node",
+      "args": ["/absolute/path/to/office-mcp-server/build/index.js"],
+      "env": {
+        "AZURE_CLIENT_ID": "your-client-id",
+        "AZURE_TENANT_ID": "your-tenant-id",
+        "AZURE_CLIENT_SECRET": "your-client-secret"
+      }
+    }
+  }
+}
+```
+
+Restart Claude Desktop after saving.
+
+---
+
+### Cursor
+
+Edit `~/.cursor/mcp.json` (global) or create `.cursor/mcp.json` in your project root (workspace-scoped):
+
+```json
+{
+  "mcpServers": {
+    "office-mcp-server": {
+      "command": "node",
+      "args": ["/absolute/path/to/office-mcp-server/build/index.js"],
+      "env": {
+        "AZURE_CLIENT_ID": "your-client-id",
+        "AZURE_TENANT_ID": "your-tenant-id",
+        "AZURE_CLIENT_SECRET": "your-client-secret"
+      }
+    }
+  }
+}
+```
+
+---
+
+### Windsurf
+
+Edit `~/.codeium/windsurf/mcp_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "office-mcp-server": {
+      "command": "node",
+      "args": ["/absolute/path/to/office-mcp-server/build/index.js"],
+      "env": {
+        "AZURE_CLIENT_ID": "your-client-id",
+        "AZURE_TENANT_ID": "your-tenant-id",
+        "AZURE_CLIENT_SECRET": "your-client-secret"
+      }
+    }
+  }
+}
+```
+
+---
+
+### IBM Bob
+
+Add to `~/.bob/settings/mcp.json` (global) or `.bob/mcp.json` (workspace). Bob supports `${env:NAME}` references so you don't have to hardcode credentials in the file:
 
 ```json
 {
@@ -57,10 +135,20 @@ Add the following entry to your Bob MCP config. Use the **global** config (`~/.b
 }
 ```
 
-> Replace `/absolute/path/to/office-mcp-server` with the actual path on your machine.
-> The `${env:...}` references are expanded from the environment Bob is running in — see [Environment Variables](#environment-variables).
+Bob hot-reloads the config on save.
 
-Bob hot-reloads the config on save. After saving, the server should appear as connected in Bob's MCP panel.
+---
+
+### Any other MCP client
+
+If your client supports stdio MCP servers, point it at:
+
+```
+command: node
+args:    ["/absolute/path/to/office-mcp-server/build/index.js"]
+```
+
+with the three Azure env vars set either inline or via your client's secrets mechanism. The server does not require any client-specific features.
 
 ---
 
